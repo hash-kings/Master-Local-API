@@ -7,6 +7,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -71,6 +72,9 @@ namespace HashKingsMaster
             {
                 await StartServer();
             }
+            
+                
+            
         }
 
         private async Task StartServer()
@@ -81,6 +85,23 @@ namespace HashKingsMaster
             HttpServ.Start();
             txtHttpLog.Text += "Start Listining on Port :" + txtHttpPort.Value + "\r\n";
             txtHttpLog.Text += "Server is Running...\r\n\r\n";
+            var host = Dns.GetHostEntry(Dns.GetHostName());
+            foreach (var ip in host.AddressList)
+            {
+                try
+                {
+                    if (ip.AddressFamily == AddressFamily.InterNetwork)
+                    {
+                        txtHttpLog.Text += "Local master IP is " + ip.ToString() + "\r\n";
+                    }
+                    
+                }
+                catch
+                {
+                    throw new Exception("No network adapters with an IPv4 address in the system!");
+                }
+            }
+            txtHttpLog.Text += "\r\n"; txtHttpLog.Text += "\r\n";
             while (true)
             {
                 try
@@ -90,6 +111,12 @@ namespace HashKingsMaster
 
                     txtHttpLog.Text += "Request: " + ctx.Request.Url.AbsoluteUri + "\r\n";
                     var page = Application.StartupPath + "/" + ctx.Request.Url.LocalPath;
+                    //txtHttpLog.Text += ctx.Request.Url.LocalPath + "\r\n";
+                    if (ctx.Request.Url.LocalPath is null)
+                        page = "index.php";
+                    if (ctx.Request.Url.LocalPath is "/")
+                        page = "index.php";
+
                     if (File.Exists(page))
                     {
                         string file;
@@ -107,18 +134,22 @@ namespace HashKingsMaster
                         await ctx.Response.OutputStream.WriteAsync(ASCIIEncoding.UTF8.GetBytes(file), 0, file.Length);
                         ctx.Response.OutputStream.Close();
                         ctx.Response.Close();
-                        txtHttpLog.Text += "Response: 200 OK\r\n\r\n";
+                        txtHttpLog.Text += "Status 200 Fetch OK\r\n\r\n";
 
                     }
+
+                   
+
                     else
                     {
                         ctx.Response.StatusCode = 404;
-                        var file = "<h2 style=\"color:red;\">404 File Not Found !!!</h2>";
+                        var file = "404 File Not Found !!!";
                         await ctx.Response.OutputStream.WriteAsync(ASCIIEncoding.UTF8.GetBytes(file), 0, file.Length);
                         ctx.Response.OutputStream.Close();
 
                         ctx.Response.Close();
-                        txtHttpLog.Text += "Response: 404 Not Found\r\n\r\n";
+                        txtHttpLog.Text += "API Not Found AKA 404 Did the URL include index.php?\r\n\r\n";
+                        
 
                     }
                 }
@@ -128,7 +159,7 @@ namespace HashKingsMaster
                    // txtHttpLog.Text += "\r\nException: " + ex.Message + "\r\n\r\n";
                     break;
                 }
-                txtHttpLog.Select(0, 0);
+                //txtHttpLog.Select(0, 0);
             }
 
 
